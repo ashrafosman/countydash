@@ -2,7 +2,7 @@ command:
   - streamlit
   - run
   - streamlit_app/app.py
-  - --server.port=8080
+  - --server.port=8000
   - --server.address=0.0.0.0
   - --server.enableCORS=false
   - --server.enableXsrfProtection=false
@@ -13,12 +13,12 @@ python:
 
 env:
   - name: DB_CATALOG
-    value: "main"
+    value: "ashraf"
   - name: DB_SCHEMA
     value: "default"
   - name: DB_HOST
-    value: ""
+    value: "adb-3438839487639471.11.azuredatabricks.net"
   - name: DB_HTTP_PATH
-    value: ""
+    value: "/sql/1.0/warehouses/a94a22f8652d85c1"
   - name: DB_TOKEN
     value: ""
