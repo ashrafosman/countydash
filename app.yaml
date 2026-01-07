@@ -4,6 +4,9 @@ command:
   - streamlit_app/app.py
   - --server.port=8080
   - --server.address=0.0.0.0
+  - --server.enableCORS=false
+  - --server.enableXsrfProtection=false
+  - --server.headless=true
 
 python:
   requirements: streamlit_app/requirements.txt
