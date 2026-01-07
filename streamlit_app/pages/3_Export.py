@@ -2,6 +2,7 @@ import json
 
 import streamlit as st
 
+from auth import get_access_token
 from data_access import load_counties
 from ui_helpers import render_data_source_status
 
@@ -12,7 +13,7 @@ render_data_source_status()
 st.title("Export County Report")
 st.caption("Generate a lightweight export for the selected county.")
 
-counties = load_counties()
+counties = load_counties(access_token=get_access_token())
 county_lookup = counties.set_index("county_id")
 
 selected_id = st.selectbox(

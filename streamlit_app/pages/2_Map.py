@@ -1,5 +1,6 @@
 import streamlit as st
 
+from auth import get_access_token
 from data_access import load_counties
 from ui_helpers import render_data_source_status
 
@@ -10,7 +11,7 @@ render_data_source_status()
 st.title("California County Map")
 st.caption("Click a county in the main dashboard to view details.")
 
-counties = load_counties()
+counties = load_counties(access_token=get_access_token())
 map_data = counties[["name", "latitude", "longitude"]].dropna()
 
 if map_data.empty:

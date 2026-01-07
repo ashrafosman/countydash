@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import streamlit as st
 
+from auth import get_access_token
 from data_access import add_review_comment, load_counties, load_review_comments
 from ui_helpers import render_data_source_status
 from utils import format_number
@@ -13,7 +14,8 @@ render_data_source_status()
 
 st.title("Behavioral Health Transformation County Dashboard")
 
-counties = load_counties()
+access_token = get_access_token()
+counties = load_counties(access_token=access_token)
 county_lookup = counties.set_index("county_id")
 
 st.sidebar.header("Filters")
@@ -154,7 +156,7 @@ with tabs[6]:
 
 st.markdown("---")
 st.markdown("### Review Comments")
-comments = load_review_comments(page_url="county-profile")
+comments = load_review_comments(page_url="county-profile", access_token=access_token)
 if comments.empty:
     st.info("No review comments yet.")
 else:
@@ -179,6 +181,7 @@ with st.expander("Add a review comment"):
                     page_url="county-profile",
                     comment_text=comment_text,
                     author=author,
+                    access_token=access_token,
                 )
                 if saved:
                     st.success("Comment saved to Delta table.")

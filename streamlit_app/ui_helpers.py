@@ -1,15 +1,17 @@
 import streamlit as st
 
+from auth import get_access_token
 from data_access import get_data_source_status
 
 
 @st.cache_data(ttl=60)
-def _cached_status():
-    return get_data_source_status()
+def _cached_status(access_token: str | None):
+    return get_data_source_status(access_token=access_token)
 
 
 def render_data_source_status() -> None:
-    status = _cached_status()
+    access_token = get_access_token()
+    status = _cached_status(access_token)
     mode = status.get("mode")
     if mode == "spark":
         st.sidebar.success(f"Data source: Spark ({status.get('details')})")

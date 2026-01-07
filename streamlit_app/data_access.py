@@ -30,10 +30,10 @@ def _get_spark():
         return None
 
 
-def _get_sql_connection():
+def _get_sql_connection(access_token: Optional[str] = None):
     host = os.getenv("DB_HOST")
     http_path = os.getenv("DB_HTTP_PATH")
-    token = os.getenv("DB_TOKEN")
+    token = access_token or os.getenv("DB_TOKEN")
     if not host or not http_path or not token:
         return None
 
@@ -45,8 +45,12 @@ def _get_sql_connection():
         return None
 
 
-def _query_sql(query: str, params: Optional[Tuple[Any, ...]] = None) -> Optional[pd.DataFrame]:
-    conn = _get_sql_connection()
+def _query_sql(
+    query: str,
+    params: Optional[Tuple[Any, ...]] = None,
+    access_token: Optional[str] = None,
+) -> Optional[pd.DataFrame]:
+    conn = _get_sql_connection(access_token)
     if conn is None:
         return None
 
@@ -62,7 +66,7 @@ def _query_sql(query: str, params: Optional[Tuple[Any, ...]] = None) -> Optional
         conn.close()
 
 
-def get_data_source_status() -> Dict[str, Any]:
+def get_data_source_status(access_token: Optional[str] = None) -> Dict[str, Any]:
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is not None:
@@ -70,13 +74,18 @@ def get_data_source_status() -> Dict[str, Any]:
 
     missing = [
         variable
-        for variable in ("DB_HOST", "DB_HTTP_PATH", "DB_TOKEN")
+        for variable in ("DB_HOST", "DB_HTTP_PATH")
         if not os.getenv(variable)
     ]
+    if not access_token and not os.getenv("DB_TOKEN"):
+        missing.append("DB_TOKEN")
     if missing:
         return {"mode": "sample", "error": f"Missing {', '.join(missing)}"}
 
-    sql_df = _query_sql(f"SELECT COUNT(*) AS row_count FROM {catalog}.{schema}.county_profiles")
+    sql_df = _query_sql(
+        f"SELECT COUNT(*) AS row_count FROM {catalog}.{schema}.county_profiles",
+        access_token=access_token,
+    )
     if sql_df is None or sql_df.empty:
         return {"mode": "sample", "error": "SQL connection failed"}
 
@@ -98,11 +107,14 @@ def _parse_json_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_counties() -> pd.DataFrame:
+def load_counties(access_token: Optional[str] = None) -> pd.DataFrame:
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is None:
-        sql_df = _query_sql(f"SELECT * FROM {catalog}.{schema}.county_profiles")
+        sql_df = _query_sql(
+            f"SELECT * FROM {catalog}.{schema}.county_profiles",
+            access_token=access_token,
+        )
         if sql_df is None or sql_df.empty:
             return _sample_counties()
         return _parse_json_columns(sql_df)
@@ -116,7 +128,7 @@ def load_counties() -> pd.DataFrame:
         return _sample_counties()
 
 
-def load_review_comments(page_url: Optional[str] = None) -> pd.DataFrame:
+def load_review_comments(page_url: Optional[str] = None, access_token: Optional[str] = None) -> pd.DataFrame:
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is None:
@@ -124,9 +136,13 @@ def load_review_comments(page_url: Optional[str] = None) -> pd.DataFrame:
             sql_df = _query_sql(
                 f"SELECT * FROM {catalog}.{schema}.review_comments WHERE page_url = ? ORDER BY created_at DESC",
                 (page_url,),
+                access_token=access_token,
             )
         else:
-            sql_df = _query_sql(f"SELECT * FROM {catalog}.{schema}.review_comments ORDER BY created_at DESC")
+            sql_df = _query_sql(
+                f"SELECT * FROM {catalog}.{schema}.review_comments ORDER BY created_at DESC",
+                access_token=access_token,
+            )
         if sql_df is None:
             return pd.DataFrame(
                 columns=["id", "element_name", "page_url", "comment_text", "author", "created_at"]
@@ -143,12 +159,18 @@ def load_review_comments(page_url: Optional[str] = None) -> pd.DataFrame:
 
 
 def add_review_comment(
-    *, element_name: str, page_url: str, comment_text: str, author: str, selected_text: Optional[str] = None
+    *,
+    element_name: str,
+    page_url: str,
+    comment_text: str,
+    author: str,
+    selected_text: Optional[str] = None,
+    access_token: Optional[str] = None,
 ) -> bool:
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is None:
-        conn = _get_sql_connection()
+        conn = _get_sql_connection(access_token)
         if conn is None:
             return False
         now = datetime.now(timezone.utc)
