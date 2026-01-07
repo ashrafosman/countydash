@@ -10,3 +10,15 @@ command:
 
 python:
   requirements: streamlit_app/requirements.txt
+
+env:
+  - name: DB_CATALOG
+    value: "main"
+  - name: DB_SCHEMA
+    value: "default"
+  - name: DB_HOST
+    value: ""
+  - name: DB_HTTP_PATH
+    value: ""
+  - name: DB_TOKEN
+    value: ""
