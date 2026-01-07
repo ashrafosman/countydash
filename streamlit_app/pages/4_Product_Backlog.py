@@ -2,8 +2,11 @@ import pandas as pd
 import streamlit as st
 
 from data.product_backlog import PRODUCT_BACKLOG
+from ui_helpers import render_data_source_status
 
 st.set_page_config(page_title="Product Backlog", layout="wide")
+
+render_data_source_status()
 
 st.title("Product Backlog")
 st.caption("Engineering backlog for the county dashboard program.")

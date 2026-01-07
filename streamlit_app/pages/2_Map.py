@@ -1,8 +1,11 @@
 import streamlit as st
 
 from data_access import load_counties
+from ui_helpers import render_data_source_status
 
 st.set_page_config(page_title="County Map", layout="wide")
+
+render_data_source_status()
 
 st.title("California County Map")
 st.caption("Click a county in the main dashboard to view details.")

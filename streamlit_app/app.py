@@ -4,9 +4,12 @@ import pandas as pd
 import streamlit as st
 
 from data_access import add_review_comment, load_counties, load_review_comments
+from ui_helpers import render_data_source_status
 from utils import format_number
 
 st.set_page_config(page_title="DHCS County Dashboard", layout="wide")
+
+render_data_source_status()
 
 st.title("Behavioral Health Transformation County Dashboard")
 

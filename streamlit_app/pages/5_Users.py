@@ -1,7 +1,11 @@
 import pandas as pd
 import streamlit as st
 
+from ui_helpers import render_data_source_status
+
 st.set_page_config(page_title="Users", layout="wide")
+
+render_data_source_status()
 
 st.title("User Management")
 

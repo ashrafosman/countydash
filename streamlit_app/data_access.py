@@ -62,6 +62,33 @@ def _query_sql(query: str, params: Optional[Tuple[Any, ...]] = None) -> Optional
         conn.close()
 
 
+def get_data_source_status() -> Dict[str, Any]:
+    catalog, schema = _get_catalog_and_schema()
+    spark = _get_spark()
+    if spark is not None:
+        return {"mode": "spark", "details": f"{catalog}.{schema}"}
+
+    missing = [
+        variable
+        for variable in ("DB_HOST", "DB_HTTP_PATH", "DB_TOKEN")
+        if not os.getenv(variable)
+    ]
+    if missing:
+        return {"mode": "sample", "error": f"Missing {', '.join(missing)}"}
+
+    sql_df = _query_sql(f"SELECT COUNT(*) AS row_count FROM {catalog}.{schema}.county_profiles")
+    if sql_df is None or sql_df.empty:
+        return {"mode": "sample", "error": "SQL connection failed"}
+
+    row_count = sql_df.iloc[0, 0]
+    try:
+        row_count = int(row_count)
+    except (TypeError, ValueError):
+        pass
+
+    return {"mode": "sql", "details": f"{catalog}.{schema}", "row_count": row_count}
+
+
 def _parse_json_columns(df: pd.DataFrame) -> pd.DataFrame:
     for column in JSON_COLUMNS:
         if column in df.columns:

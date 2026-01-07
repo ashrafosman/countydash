@@ -1,6 +1,10 @@
 import streamlit as st
 
+from ui_helpers import render_data_source_status
+
 st.set_page_config(page_title="Data Elements Guide", layout="wide")
+
+render_data_source_status()
 
 st.title("Data Elements Guide")
 
