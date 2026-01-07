@@ -30,6 +30,38 @@ def _get_spark():
         return None
 
 
+def _get_sql_connection():
+    host = os.getenv("DB_HOST")
+    http_path = os.getenv("DB_HTTP_PATH")
+    token = os.getenv("DB_TOKEN")
+    if not host or not http_path or not token:
+        return None
+
+    try:
+        from databricks import sql as dbsql  # type: ignore
+
+        return dbsql.connect(server_hostname=host, http_path=http_path, access_token=token)
+    except Exception:
+        return None
+
+
+def _query_sql(query: str, params: Optional[Tuple[Any, ...]] = None) -> Optional[pd.DataFrame]:
+    conn = _get_sql_connection()
+    if conn is None:
+        return None
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query, params or ())
+            rows = cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        return pd.DataFrame(rows, columns=columns)
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
 def _parse_json_columns(df: pd.DataFrame) -> pd.DataFrame:
     for column in JSON_COLUMNS:
         if column in df.columns:
@@ -43,7 +75,10 @@ def load_counties() -> pd.DataFrame:
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is None:
-        return _sample_counties()
+        sql_df = _query_sql(f"SELECT * FROM {catalog}.{schema}.county_profiles")
+        if sql_df is None or sql_df.empty:
+            return _sample_counties()
+        return _parse_json_columns(sql_df)
 
     try:
         df = spark.read.table(f"{catalog}.{schema}.county_profiles").toPandas()
@@ -58,7 +93,18 @@ def load_review_comments(page_url: Optional[str] = None) -> pd.DataFrame:
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is None:
-        return pd.DataFrame(columns=["id", "element_name", "page_url", "comment_text", "author", "created_at"])
+        if page_url:
+            sql_df = _query_sql(
+                f"SELECT * FROM {catalog}.{schema}.review_comments WHERE page_url = ? ORDER BY created_at DESC",
+                (page_url,),
+            )
+        else:
+            sql_df = _query_sql(f"SELECT * FROM {catalog}.{schema}.review_comments ORDER BY created_at DESC")
+        if sql_df is None:
+            return pd.DataFrame(
+                columns=["id", "element_name", "page_url", "comment_text", "author", "created_at"]
+            )
+        return sql_df
 
     try:
         comments = spark.read.table(f"{catalog}.{schema}.review_comments")
@@ -75,7 +121,36 @@ def add_review_comment(
     catalog, schema = _get_catalog_and_schema()
     spark = _get_spark()
     if spark is None:
-        return False
+        conn = _get_sql_connection()
+        if conn is None:
+            return False
+        now = datetime.now(timezone.utc)
+        payload = (
+            os.urandom(16).hex(),
+            element_name,
+            page_url,
+            comment_text,
+            selected_text,
+            author,
+            now,
+            now,
+        )
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    (
+                        "INSERT INTO "
+                        f"{catalog}.{schema}.review_comments "
+                        "(id, element_name, page_url, comment_text, selected_text, author, created_at, updated_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    ),
+                    payload,
+                )
+            return True
+        except Exception:
+            return False
+        finally:
+            conn.close()
 
     try:
         payload = [

@@ -28,6 +28,9 @@ DB_CATALOG=ashraf DB_SCHEMA=default streamlit run streamlit_app/app.py
 
 - `DB_CATALOG`: Databricks catalog name (default: `main`)
 - `DB_SCHEMA`: Databricks schema name (default: `default`)
+- `DB_HOST`: Databricks workspace host for SQL (e.g. `adb-1234567890123456.7.azuredatabricks.net`)
+- `DB_HTTP_PATH`: SQL warehouse HTTP path
+- `DB_TOKEN`: Databricks personal access token
 
 ## App Structure
 
